@@ -7,16 +7,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import re
 from typing import Protocol, Sequence
 
+from PaperTracker.core.dedup import resolve_timestamp
 from PaperTracker.core.models import Paper
 from PaperTracker.core.query import SearchQuery
+from PaperTracker.services.deduplicate import deduplicate_cross_source_batch
 from PaperTracker.utils.log import log
 
-_TITLE_WS_RE = re.compile(r"\s+")
-_TITLE_STRIP_RE = re.compile(r"[^a-z0-9 ]")
-_TITLE_DEDUP_MIN_LEN = 24
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
@@ -52,9 +50,9 @@ class PaperSource(Protocol):
 class PaperSearchService:
     """Application service that searches papers across configured sources.
 
-    The service does not infer source-level temporal semantics. It only
-    consumes protocol fields (`Paper.published` / `Paper.updated`) with a
-    fixed ordering strategy: published-first, then updated fallback.
+    The service does not infer source-level temporal semantics or source
+    pagination behavior. It only coordinates cross-source aggregation,
+    sorting, and in-batch deduplication using protocol fields.
     """
 
     sources: tuple[PaperSource, ...]
@@ -115,37 +113,16 @@ class PaperSearchService:
             log.warning("Search service close completed with failures: %s", ", ".join(failed_sources))
 
     def _deduplicate_in_batch(self, papers: Sequence[Paper]) -> list[Paper]:
-        """Deduplicate papers inside a single search batch."""
-        winners: dict[tuple[str, ...], Paper] = {}
-        ordered_keys: list[tuple[str, ...]] = []
+        """Deduplicate one aggregated batch across sources.
 
-        for paper in papers:
-            dedup_key = _paper_dedup_key(paper)
-            if dedup_key is None:
-                unique_key = ("unique", paper.source, paper.id)
-                if unique_key in winners:
-                    winners[unique_key] = self._pick_winner(winners[unique_key], paper)
-                    continue
-                ordered_keys.append(unique_key)
-                winners[unique_key] = paper
-                continue
-
-            existing = winners.get(dedup_key)
-            if existing is None:
-                winners[dedup_key] = paper
-                ordered_keys.append(dedup_key)
-                continue
-
-            winners[dedup_key] = self._pick_winner(existing, paper)
-
-        return [winners[key] for key in ordered_keys]
-
-    def _pick_winner(self, left: Paper, right: Paper) -> Paper:
-        """Pick deterministic winner between two duplicate papers."""
-        source_order = self._source_order_map()
-        left_rank = _paper_rank(left, source_order=source_order)
-        right_rank = _paper_rank(right, source_order=source_order)
-        return left if left_rank <= right_rank else right
+        Source adapters own deduplication while paging within their own fetch
+        loops. This method only coordinates duplicate resolution after papers
+        from all configured sources have been aggregated.
+        """
+        return deduplicate_cross_source_batch(
+            papers,
+            source_rank=self._source_order_map(),
+        )
 
     def _source_order_map(self) -> dict[str, int]:
         """Return source priority map from configured source order."""
@@ -157,57 +134,8 @@ class PaperSearchService:
         return sorted(
             papers,
             key=lambda paper: (
-                -int((paper.published or paper.updated or _EPOCH).timestamp()),
+                -int((resolve_timestamp(paper) or _EPOCH).timestamp()),
                 source_order.get(paper.source, len(source_order)),
                 paper.id,
             ),
         )
-
-
-def _paper_dedup_key(paper: Paper) -> tuple[str, ...] | None:
-    """Build per-batch dedup key for a paper."""
-    doi_norm = _normalize_doi(paper.doi)
-    if doi_norm:
-        return ("doi", doi_norm)
-
-    title_norm = _normalize_title(paper.title)
-    if len(title_norm) < _TITLE_DEDUP_MIN_LEN:
-        return None
-
-    year = _paper_year(paper)
-    if year is None:
-        return None
-
-    return ("title", title_norm, str(year))
-
-
-def _paper_rank(paper: Paper, *, source_order: dict[str, int]) -> tuple[int, int, str]:
-    """Build ranking tuple for deterministic duplicate winner selection."""
-    source_rank = source_order.get(paper.source, len(source_order))
-    timestamp = paper.published or paper.updated or _EPOCH
-    return (source_rank, -int(timestamp.timestamp()), paper.id)
-
-
-def _paper_year(paper: Paper) -> int | None:
-    """Extract comparable year from paper timestamp fields."""
-    timestamp = paper.published or paper.updated
-    return timestamp.year if timestamp is not None else None
-
-
-def _normalize_doi(doi: str | None) -> str:
-    """Normalize DOI for matching across providers."""
-    if doi is None:
-        return ""
-    normalized = doi.strip().lower()
-    for prefix in ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:"):
-        if normalized.startswith(prefix):
-            normalized = normalized[len(prefix):]
-            break
-    return normalized.strip()
-
-
-def _normalize_title(title: str) -> str:
-    """Normalize title for conservative fallback deduplication."""
-    lowered = title.casefold()
-    no_punctuation = _TITLE_STRIP_RE.sub(" ", lowered)
-    return _TITLE_WS_RE.sub(" ", no_punctuation).strip()
