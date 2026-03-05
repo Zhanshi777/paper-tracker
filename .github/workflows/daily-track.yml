@@ -53,10 +53,30 @@ jobs:
       run: |
         python -m PaperTracker search --config config.yaml
         
+    - name: Check docs structure
+      run: |
+        echo "=== Docs directory ==="
+        ls -la docs/ || echo "No docs dir"
+        echo "=== HTML directory ==="
+        ls -la docs/html/ || echo "No html dir"
+        
     - name: Create index.html
       run: |
-        ls -la docs/
-        echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=html/"></head><body>Redirecting...</body></html>' > docs/index.html
+        cat > docs/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta http-equiv="refresh" content="0; url=html/">
+            <title>Paper Tracker</title>
+        </head>
+        <body>
+            <h1>Paper Tracker</h1>
+            <p><a href="html/">View Papers</a></p>
+        </body>
+        </html>
+        EOF
+        echo "=== Created index.html ==="
+        ls -la docs/index.html
         
     - name: Setup Pages
       uses: actions/configure-pages@v5
