@@ -45,7 +45,7 @@ llm:
   enable_summary: true
   target_lang: Simplified Chinese
   
-  provider: openai
+  provider: openai-compat
   base_url: https://api.deepseek.com
   model: deepseek-chat
 
