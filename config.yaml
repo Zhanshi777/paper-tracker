@@ -55,5 +55,5 @@ notification:
     smtp_host: smtp.qq.com
     smtp_port: 465
     smtp_ssl: true
-    to: ${{ EMAIL_TO }}           # 使用环境变量
-    from: ${{ EMAIL_SENDER }}     # 使用环境变量
+    to: 934750742@qq.com           # 使用环境变量
+    from: 934750742@qq.com      # 使用环境变量
