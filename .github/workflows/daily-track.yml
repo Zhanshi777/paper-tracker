@@ -51,9 +51,9 @@ jobs:
         SMTP_PORT: ${{ vars.SMTP_PORT }}
         SMTP_USER: ${{ vars.SMTP_USER }}
         SMTP_PASS: ${{ secrets.SMTP_PASS }}
+
       run: |
-        python -m arxiv_tracker.cli run --config config.yaml --site-dir docs
-        
+        python -m src.PaperTracker run --config config.yaml --site-dir docs  
     - name: Setup Pages
       uses: actions/configure-pages@v5
       
