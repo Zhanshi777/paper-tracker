@@ -12,32 +12,22 @@ search:
   max_lookback_days: 30
 
 queries:
-  - NAME: Deep Learning
+  - NAME: Perovskite Solar Cell
     OR:
-      - deep learning
-      - neural network
+      - perovskite solar cell
+      - perovskite photovoltaic
+      - perovskite
+      - solar cell
     NOT:
-      - survey
+      - review
     CATEGORY:
       OR:
-        - cs.LG
-        - cs.CV
-
-  - NAME: LLM Research
-    OR:
-      - large language model
-      - LLM
-    NOT:
-      - law
-      - legal
-    CATEGORY:
-      OR:
-        - cs.CL
-        - cs.AI
+        - cond-mat.mtrl-sci
+        - physics.chem-ph
 
 output:
   base_dir: docs/
-  formats: [console, markdown, html]
+  formats: [console, markdown, html]   # 移除 email
 
 llm:
   enabled: true
@@ -46,7 +36,7 @@ llm:
   target_lang: Simplified Chinese
   
   provider: openai-compat
-  base_url: https://api.deepseek.com
+  base_url: https://api.deepseek.com 
   model: deepseek-chat
 
 notification:
@@ -55,5 +45,5 @@ notification:
     smtp_host: smtp.qq.com
     smtp_port: 465
     smtp_ssl: true
-    to: 934750742@qq.com           # 使用环境变量
-    from: 934750742@qq.com      # 使用环境变量
+    to: 934750742@qq.com
+    from: 934750742@qq.com
