@@ -14,10 +14,31 @@ search:
 queries:
   - NAME: Perovskite Solar Cell
     OR:
-      - perovskite solar cell
-      - perovskite photovoltaic
+      - "perovskite solar cell"
+      - "perovskite photovoltaic"
+      - "perovskite photovoltaics"
+      - "perovskite solar"
+    AND:
       - perovskite
-      - solar cell
+    NOT:
+      - review
+      - perspective
+      - LED
+      - "light-emitting diode"
+      - photoluminescence
+      - laser
+    CATEGORY:
+      OR:
+        - cond-mat.mtrl-sci
+        - physics.chem-ph
+
+  - NAME: Perovskite Efficiency
+    OR:
+      - "power conversion efficiency"
+      - "certified efficiency"
+      - "high efficiency perovskite"
+    AND:
+      - perovskite
     NOT:
       - review
     CATEGORY:
