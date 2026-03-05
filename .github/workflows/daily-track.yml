@@ -43,6 +43,7 @@ jobs:
       env:
         OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
         OPENAI_COMPAT_API_BASE: ${{ vars.OPENAI_COMPAT_API_BASE }}
+        LLM_API_KEY: ${{ secrets.LLM_API_KEY }}        # 添加了这行！
         EMAIL_TO: ${{ vars.EMAIL_TO }}
         EMAIL_SENDER: ${{ vars.EMAIL_SENDER }}
         SMTP_HOST: ${{ vars.SMTP_HOST }}
